@@ -226,6 +226,7 @@
                "lem-css-mode"
                "lem-rust-mode"
                "lem-paredit-mode"
+               "lem-mlem-mode"
                "lem-nim-mode"
                #-clasp
                "lem-scheme-mode"
