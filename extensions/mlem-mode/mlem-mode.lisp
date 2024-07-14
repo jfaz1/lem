@@ -1,5 +1,5 @@
 (defpackage :lem-mlem-mode
-  (:use :cl :lem)
+  (:use :cl :lem :lem-core)
   (:export :mlem-mode
            :mlem-delete-forward
            :mlem-delete-backward))
@@ -25,22 +25,36 @@
 (defun mlem-skip-ws-backward (point)
   "Skip over any whitespace preceding point."
   (skip-chars-backward point *mlem-chars-to-skip*))
- 
+
 (define-command mlem-delete-forward () ()
-  (with-point ((origin (current-point) :right-inserting))
-    (if (member (character-at origin) *mlem-chars-to-skip*)
-        (progn
-          (mlem-skip-ws-forward origin)
-          (delete-between-points (current-point) origin))
-        (delete-next-char 1))))
+  (if (buffer-mark-p (current-buffer))
+      (let ((start (cursor-region-beginning (current-point)))
+            (end (cursor-region-end (current-point))))
+        (delete-between-points start end)
+        (buffer-unmark (current-buffer)))
+      (with-point ((origin (current-point) :right-inserting))
+        (if (member (character-at origin) *mlem-chars-to-skip*)
+            (progn
+              (mlem-skip-ws-forward origin)
+              (delete-between-points (current-point) origin))
+            (delete-next-char 1)))))
 
 (define-command mlem-delete-backward () ()
-  (with-point ((origin (current-point) :left-inserting))
-    (if (member (character-at origin -1) *mlem-chars-to-skip*)
-        (progn
-          (mlem-skip-ws-backward origin)
-          (delete-between-points origin (current-point)))
-        (delete-previous-char 1))))
+  (if (buffer-mark-p (current-buffer))
+      (let ((start (cursor-region-beginning (current-point)))
+            (end (cursor-region-end (current-point))))
+        (delete-between-points start end)
+        (buffer-unmark (current-buffer)))
+      (with-point ((origin (current-point) :left-inserting))
+        (if (member (character-at origin -1) *mlem-chars-to-skip*)
+            (progn
+              (mlem-skip-ws-backward origin)
+              (delete-between-points origin (current-point)))
+            (delete-previous-char 1)))))
 
 (define-key *mlem-mode-keymap* 'delete-next-char 'mlem-delete-forward)
 (define-key *mlem-mode-keymap* 'delete-previous-char 'mlem-delete-backward)
+
+;; Bind default deletion behavior to M
+(define-key *mlem-mode-keymap* "M-Delete" 'delete-next-char)
+(define-key *mlem-mode-keymap* "M-Backspace" 'delete-previous-char)
