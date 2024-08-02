@@ -516,7 +516,6 @@
    :*file-completion-ignore-case*
    :completion
    :completion-test
-   :completion-hyphen
    :completion-file
    :completion-strings
    :completion-buffer)
