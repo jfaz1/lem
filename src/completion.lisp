@@ -62,24 +62,21 @@
               :while pos))))
 
 (defun completion (name elements &key (test #'search) separator key)
-  (labels ((apply-key (elt) (if key (funcall key elt) elt))
-           (test-with-separator (elt)
-             (let* ((elt (apply-key elt))
-                    (parts1 (explode-string name separator))
-                    (parts2 (explode-string elt separator)))
-               (and (<= (length parts1) (length parts2))
-                    (loop :for p1 :in parts1
-                          :for p2 :in parts2
-                          :always (funcall test p1 p2)))))
-           (test-without-separator (elt)
-             (funcall test name (apply-key elt))))
-    (remove-if-not (if separator
-                       #'test-with-separator
-                       #'test-without-separator)
-                   elements)))
-
-(defun completion-hyphen (name elements &key key)
-  (completion name elements :test #'completion-test :separator "-" :key key))
+  (let* ((key-fn (or key #'identity))
+         (components (split-into-components name separator))
+         (test-fn (if (eq test #'search)
+                      (lambda (a b) (search a b :test #'char-equal))
+                      test))
+         (matches
+           (remove-if-not
+            (lambda (elt)
+              (let ((elt-str (funcall key-fn elt)))
+                (all-components-match-p components elt-str test-fn)))
+            elements)))
+    (sort matches
+          (lambda (a b)
+            (> (completion-score name (funcall key-fn a) test-fn)
+               (completion-score name (funcall key-fn b) test-fn))))))
 
 (defun completion-file (str directory &key (ignore-case *file-completion-ignore-case*) directory-only)
   (setf str (expand-file-name str directory))
