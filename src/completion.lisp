@@ -2,6 +2,40 @@
 
 (defvar *file-completion-ignore-case* t)
 
+(defun split-into-components (string &optional separator)
+  "Split string into components, using an optional SEPARATOR or space as default."
+  (if separator
+      (str:split separator string)
+      (str:words string)))
+
+(defun component-matches-p (component candidate test)
+  "Check if COMPONENT matches CANDIDATE using TEST."
+  (or (funcall test component candidate)
+      (every (lambda (char)
+               (funcall test (string char) candidate))
+             component)))
+
+(defun all-components-match-p (components candidate test)
+  "Check if all COMPONENTS match CANDIDATE using TEST."
+  (every (lambda (component)
+           (component-matches-p component candidate test))
+         components))
+
+(defun completion-score (pattern candidate test)
+  "Compute a score for CANDIDATE matching PATTERN using TEST."
+  (let* ((components (split-into-components pattern))
+         (filename (str:substring (1+ (or (position #\/ candidate :from-end t) -1)) nil candidate))
+         (full-match-score (cond
+                             ((funcall test pattern filename) 1000)
+                             ((funcall test pattern candidate) 900)
+                             ((str:starts-with-p pattern filename :ignore-case t) 800)
+                             ((str:starts-with-p pattern candidate :ignore-case t) 700)
+                             (t 0)))
+         (component-match-score (count-if (lambda (comp) 
+                                            (funcall test comp candidate))
+                                          components)))
+    (+ full-match-score component-match-score)))
+
 (defun fuzzy-match-p (str elt &optional ignore-case)
   (loop :with start := 0
         :for c :across str
